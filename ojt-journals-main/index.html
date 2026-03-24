@@ -1,0 +1,116 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | OJT Daily Journal</title>
+    <link rel="stylesheet" href="system-script/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 2rem;
+            background: radial-gradient(circle at top right, rgba(79, 70, 229, 0.05), transparent),
+                        radial-gradient(circle at bottom left, rgba(236, 72, 153, 0.05), transparent);
+        }
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="glass-card login-card animate-fade">
+            <a href="index.html" class="logo" style="margin-bottom: 2rem; justify-content: center;">
+                <img src="assets/richwell-colleges-logo.webp" alt="Logo" style="height: 60px;">
+            </a>
+            
+            <h2 style="text-align: center; margin-bottom: 0.5rem;">Welcome Back</h2>
+            <p style="text-align: center; color: var(--text-muted); margin-bottom: 2rem; font-size: 0.9rem;">
+                Please enter your credentials to log in.
+            </p>
+
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" placeholder="name@email.com" autocomplete="username" required>
+                </div>
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required>
+                </div>
+                
+                <div id="error-message" style="color: var(--danger); font-size: 0.85rem; margin-bottom: 1rem; display: none; text-align: center;"></div>
+
+                <button type="submit" id="login-btn" class="btn btn-primary" style="width: 100%;">
+                    Log In
+                </button>
+            </form>
+
+            <div style="margin-top: 2rem; padding: 1rem; background: rgba(79, 70, 229, 0.05); border-radius: 0.5rem; border: 1px solid var(--border);">
+                <p style="font-size: 0.75rem; font-weight: 700; color: var(--primary); margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">Demo Credentials</p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <p style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">Admin</p>
+                        <p style="font-size: 0.75rem; color: var(--text); font-family: monospace;">admin@gmail.com</p>
+                        <p style="font-size: 0.75rem; color: var(--text); font-family: monospace;">richwell2026</p>
+                    </div>
+                    <div>
+                        <p style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">Student</p>
+                        <p style="font-size: 0.75rem; color: var(--text); font-family: monospace;">naruto@gmail.com</p>
+                        <p style="font-size: 0.75rem; color: var(--text); font-family: monospace;">Pass231112</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="minimal-footer">
+        <p>
+            <a href="terms.html">Terms & Conditions</a>
+            <span>Developed by Jun Alvior</span>
+        </p>
+    </footer>
+
+    <script type="module">
+        import { loginUser, redirectUserByRole, guardPage } from './system-script/auth.js';
+        
+        // Redirect if already logged in
+        guardPage();
+
+        const loginForm = document.getElementById('login-form');
+        const loginBtn = document.getElementById('login-btn');
+        const errorMessage = document.getElementById('error-message');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            // Loading state
+            loginBtn.disabled = true;
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+            errorMessage.style.display = 'none';
+
+            try {
+                const userData = await loginUser(email, password);
+                redirectUserByRole(userData.role);
+            } catch (error) {
+                errorMessage.textContent = error.message.includes('auth/invalid-credential') 
+                    ? 'Invalid email or password.' 
+                    : 'An error occurred during login. Please try again.';
+                errorMessage.style.display = 'block';
+                
+                // Reset button
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = 'Log In';
+            }
+        });
+    </script>
+</body>
+</html>

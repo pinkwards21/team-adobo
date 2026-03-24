@@ -1,0 +1,608 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Students | Admin</title>
+    <link rel="stylesheet" href="../system-script/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .search-box {
+            position: relative;
+            max-width: 400px;
+            width: 100%;
+        }
+        .search-box i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+        .search-box input {
+            padding-left: 2.5rem;
+        }
+        .student-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .student-table th {
+            text-align: left;
+            padding: 1rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .student-table td {
+            padding: 1.25rem 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .student-table tr:hover {
+            background: var(--glass-bg);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 2rem 1rem;
+            align-items: flex-start;
+            justify-content: center;
+        }
+        .modal-content {
+            width: 100%;
+            max-width: 600px;
+            margin: auto;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed !important;
+            pointer-events: none;
+        }
+
+        /* Responsive adjustments for 375px and below */
+        @media (max-width: 480px) {
+            .page-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 1.25rem;
+                text-align: center;
+            }
+            .page-header > div:last-child {
+                display: flex;
+                flex-direction: column;
+                width: 100%;
+                gap: 0.75rem !important;
+            }
+            .page-header .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .filter-bar {
+                flex-direction: column;
+                padding: 1rem !important;
+                gap: 1rem !important;
+            }
+            .filter-bar > * {
+                width: 100% !important;
+                min-width: 0 !important;
+                flex: none !important;
+            }
+            .modal-content {
+                padding: 1.25rem !important;
+                width: 100%;
+                margin: 0;
+            }
+            .modal-content .grid-2-col {
+                grid-template-columns: 1fr !important;
+                gap: 0.5rem !important;
+            }
+            .student-table th, .student-table td {
+                padding: 0.75rem 0.5rem;
+            }
+            #stu-schedule {
+                justify-content: center;
+            }
+        }
+
+        /* Specific optimizations for 375px and below */
+        @media (max-width: 375px) {
+            .student-table th, .student-table td {
+                padding: 0.6rem 0.35rem;
+                font-size: 0.7rem;
+            }
+            .filter-bar {
+                padding: 0.75rem !important;
+            }
+            .modal-content {
+                width: 100%;
+                padding: 1rem !important;
+                margin: 0;
+            }
+            #modal-title {
+                font-size: 1.25rem;
+                margin-bottom: 1rem !important;
+            }
+            .input-group label {
+                font-size: 0.8rem;
+            }
+            #stu-schedule label {
+                font-size: 0.65rem !important;
+                gap: 0.15rem !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="../index.html" class="logo">
+            <img src="../assets/richwell-colleges-logo.webp" alt="Logo" style="height: 40px;">
+        </a>
+        <button id="menu-toggle" class="menu-toggle"><i class="fas fa-bars"></i></button>
+        <div class="nav-links">
+            <a href="admin-dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
+            <!-- Students hidden as per request -->
+        </div>
+        <div>
+            <button id="logout-btn" class="btn btn-outline" style="padding: 0.5rem 1rem;">
+                <i class="fas fa-sign-out-alt"></i> <span class="hide-mobile">Logout</span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="container animate-fade">
+        <div class="page-header">
+            <div>
+                <h1>Manage Students</h1>
+                <p style="color: var(--text-muted);">View, search, and add OJT students.</p>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <a href="admin-archives.html" class="btn btn-outline">
+                    <i class="fas fa-archive"></i> View Archives
+                </a>
+                <button id="add-student-btn" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i> Add Student
+                </button>
+            </div>
+        </div>
+
+        <div class="glass-card filter-bar" style="margin-bottom: 2rem; padding: 0.75rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <div class="search-box" style="flex: 2; min-width: 250px; margin-bottom: 0;">
+                <i class="fas fa-search"></i>
+                <input type="text" id="student-search" placeholder="Search students..." aria-label="Search students by name, ID or company">
+            </div>
+            
+            <select id="filter-section" class="btn btn-outline" style="flex: 1; min-width: 140px; padding: 0.6rem; font-size: 0.85rem; height: 42px;" aria-label="Filter by section">
+                <option value="all">All Sections</option>
+            </select>
+
+            <select id="sort-by" class="btn btn-outline" style="flex: 1; min-width: 140px; padding: 0.6rem; font-size: 0.85rem; height: 42px;" aria-label="Sort students list">
+                <option value="name-asc">Sort: A-Z</option>
+                <option value="name-desc">Sort: Z-A</option>
+                <option value="id-asc">Sort: ID Asc</option>
+                <option value="id-desc">Sort: ID Desc</option>
+            </select>
+        </div>
+
+        <div class="glass-card" style="padding: 0; overflow-x: auto;">
+            <table class="student-table">
+                <thead>
+                    <tr>
+                        <th>Student Info</th>
+                        <th class="hide-mobile">Student ID</th>
+                        <th>Section</th>
+                        <th class="hide-mobile">Company</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="student-list-body">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">Loading students...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer class="minimal-footer">
+        <p>
+            <a href="../terms.html">Terms & Conditions</a>
+            <span>Developed by Jun Alvior</span>
+        </p>
+    </footer>
+
+    <!-- Add Student Modal -->
+    <div id="student-modal" class="modal">
+        <div class="glass-card modal-content">
+            <h2 id="modal-title" style="margin-bottom: 1.5rem;">Add New Student</h2>
+            <form id="add-student-form">
+                <input type="hidden" id="stu-uid">
+                <div class="grid-2-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="input-group">
+                        <label for="stu-fname">First Name</label>
+                        <input type="text" id="stu-fname" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="stu-lname">Last Name</label>
+                        <input type="text" id="stu-lname" required>
+                    </div>
+                </div>
+                <div class="grid-2-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="input-group">
+                        <label for="stu-email">Email Address</label>
+                        <input type="email" id="stu-email" required>
+                        <span id="email-error" style="color: var(--danger); font-size: 0.7rem; display: none;">Email already exists!</span>
+                    </div>
+                    <div class="input-group">
+                        <label for="stu-id">Student ID</label>
+                        <input type="text" id="stu-id" required>
+                        <span id="id-error" style="color: var(--danger); font-size: 0.7rem; display: none;">ID already exists!</span>
+                    </div>
+                </div>
+                <div class="grid-2-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="input-group">
+                        <label for="stu-section">Section</label>
+                        <input type="text" id="stu-section" placeholder="e.g. BSIT-4A" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="stu-company">Company</label>
+                        <input type="text" id="stu-company" required>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="stu-position">Position</label>
+                    <input type="text" id="stu-position" required>
+                </div>
+                <div class="grid-2-col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                    <div class="input-group">
+                        <label for="stu-ojt-start">OJT Start Date</label>
+                        <input type="date" id="stu-ojt-start" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Weekly Schedule</label>
+                        <div id="stu-schedule" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+                            <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.2rem; cursor: pointer;">
+                                <input type="checkbox" value="1" checked> M
+                            </label>
+                            <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.2rem; cursor: pointer;">
+                                <input type="checkbox" value="2" checked> T
+                            </label>
+                            <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.2rem; cursor: pointer;">
+                                <input type="checkbox" value="3" checked> W
+                            </label>
+                            <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.2rem; cursor: pointer;">
+                                <input type="checkbox" value="4" checked> Th
+                            </label>
+                            <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.2rem; cursor: pointer;">
+                                <input type="checkbox" value="5" checked> F
+                            </label>
+                            <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.2rem; cursor: pointer;">
+                                <input type="checkbox" value="6"> S
+                            </label>
+                            <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.2rem; cursor: pointer;">
+                                <input type="checkbox" value="0"> Su
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+                    <button type="button" id="close-modal" class="btn btn-outline" style="flex: 1;">Cancel</button>
+                    <button type="submit" id="submit-btn" class="btn btn-primary" style="flex: 1;">Save Student</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        /**
+         * Admin Student Management Module
+         * Handles student account creation, activity status toggling (Active/Archived),
+         * and provides a searchable/filterable list of currently enrolled students.
+         */
+        import { db, serverTimestamp, firebaseConfig } from '../system-script/firebase-core.js';
+        import { logoutUser, guardPage } from '../system-script/auth.js';
+        import { getAllStudents, updateUserStatus } from '../system-script/admin-utils.js';
+        import { showToast, showConfirm, setupHamburgerMenu, escapeHTML } from '../system-script/ui-utils.js';
+        import { doc, setDoc, updateDoc, collection } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+        guardPage('admin');
+        setupHamburgerMenu();
+        document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+        const modal = document.getElementById('student-modal');
+        const addBtn = document.getElementById('add-student-btn');
+        const closeBtn = document.getElementById('close-modal');
+        const form = document.getElementById('add-student-form');
+        const searchInput = document.getElementById('student-search');
+        let allStudents = [];
+
+        addBtn.onclick = () => {
+            document.getElementById('modal-title').textContent = 'Add New Student';
+            document.getElementById('submit-btn').textContent = 'Save Student';
+            document.getElementById('stu-uid').value = '';
+            document.getElementById('stu-email').disabled = false;
+            document.getElementById('email-error').style.display = 'none';
+            document.getElementById('id-error').style.display = 'none';
+            document.getElementById('submit-btn').disabled = false;
+            form.reset();
+            modal.style.display = 'flex';
+        };
+        closeBtn.onclick = () => modal.style.display = 'none';
+        window.onclick = (e) => { if(e.target == modal) modal.style.display = 'none'; }
+
+        // Validation Logic
+        const stuEmailInput = document.getElementById('stu-email');
+        const stuIdInput = document.getElementById('stu-id');
+        const submitBtn = document.getElementById('submit-btn');
+
+        function validateUniqueness() {
+            const currentUid = document.getElementById('stu-uid').value;
+            const email = stuEmailInput.value.trim().toLowerCase();
+            const sid = stuIdInput.value.trim();
+            
+            const emailError = document.getElementById('email-error');
+            const idError = document.getElementById('id-error');
+
+            const emailDuplicate = allStudents.find(s => s.email.toLowerCase() === email && s.id !== currentUid);
+            const idDuplicate = allStudents.find(s => s.studentId === sid && s.id !== currentUid);
+
+            emailError.style.display = emailDuplicate ? 'block' : 'none';
+            idError.style.display = idDuplicate ? 'block' : 'none';
+
+            submitBtn.disabled = !!(emailDuplicate || idDuplicate);
+        }
+
+        stuEmailInput.addEventListener('input', validateUniqueness);
+        stuIdInput.addEventListener('input', validateUniqueness);
+
+        async function loadStudents() {
+            try {
+                allStudents = await getAllStudents();
+                populateSections(allStudents);
+                applyFilters();
+            } catch (error) {
+                console.error(error);
+                document.getElementById('student-list-body').innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--danger);">Failed to load students.</td></tr>';
+            }
+        }
+
+        function populateSections(students) {
+            const sectionFilter = document.getElementById('filter-section');
+            const sections = [...new Set(students.map(s => s.section))].sort();
+            
+            // Keep "All Sections" and add unique sections
+            sectionFilter.innerHTML = '<option value="all">All Sections</option>' + 
+                sections.map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+
+        function applyFilters() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const sectionFilter = document.getElementById('filter-section').value;
+            const sortVal = document.getElementById('sort-by').value;
+
+            let filtered = allStudents.filter(s => {
+                const matchesSearch = 
+                    `${s.firstName} ${s.lastName}`.toLowerCase().includes(searchTerm) ||
+                    s.studentId.toLowerCase().includes(searchTerm) ||
+                    s.company.toLowerCase().includes(searchTerm);
+                
+                const matchesSection = sectionFilter === 'all' || s.section === sectionFilter;
+                
+                return matchesSearch && matchesSection;
+            });
+
+            // Sorting
+            filtered.sort((a, b) => {
+                if (sortVal === 'name-asc') return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+                if (sortVal === 'name-desc') return `${b.firstName} ${b.lastName}`.localeCompare(`${a.firstName} ${a.lastName}`);
+                if (sortVal === 'id-asc') return a.studentId.localeCompare(b.studentId);
+                if (sortVal === 'id-desc') return b.studentId.localeCompare(a.studentId);
+                return 0;
+            });
+
+            renderStudents(filtered);
+        }
+
+        let searchTimeout;
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(applyFilters, 300);
+        });
+        document.getElementById('filter-section').addEventListener('change', applyFilters);
+        document.getElementById('sort-by').addEventListener('change', applyFilters);
+
+        function renderStudents(students) {
+            const body = document.getElementById('student-list-body');
+            if (students.length === 0) {
+                body.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">No students found.</td></tr>';
+                return;
+            }
+
+            body.innerHTML = students.map(s => {
+                const safeName = `${escapeHTML(s.firstName)} ${escapeHTML(s.lastName)}`;
+                const safeEmail = escapeHTML(s.email);
+                const safeId = escapeHTML(s.studentId);
+                const safeSection = escapeHTML(s.section);
+                const safeCompany = escapeHTML(s.company);
+
+                return `
+                <tr>
+                    <td>
+                        <div style="font-weight: 600;">${safeName}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); display: flex; flex-direction: column;">
+                            <span>${safeEmail}</span>
+                            <span class="show-mobile-only" style="display: none; font-family: monospace; margin-top: 2px;">ID: ${safeId}</span>
+                        </div>
+                    </td>
+                    <td class="hide-mobile" style="font-family: monospace;">${safeId}</td>
+                    <td>${safeSection}</td>
+                    <td class="hide-mobile">${safeCompany}</td>
+                    <td>
+                        <span class="badge ${s.isActive ? 'badge-success' : 'badge-danger'}">
+                            ${s.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td style="display: flex; gap: 0.5rem;">
+                        <button onclick="viewStudentLogs('${s.id}')" class="btn btn-outline" style="padding: 0.4rem 0.6rem; font-size: 0.7rem;" title="View Logs">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button onclick="editStudent('${s.id}')" class="btn btn-primary" style="padding: 0.4rem 0.6rem; font-size: 0.7rem;" title="Edit Student">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="archiveStudent('${s.id}')" class="btn btn-outline" style="padding: 0.4rem 0.6rem; font-size: 0.7rem; border-color: var(--danger); color: var(--danger);" title="Archive Student">
+                            <i class="fas fa-archive"></i>
+                        </button>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        window.viewStudentLogs = (uid) => {
+            sessionStorage.setItem('selectedStudentUid', uid);
+            window.location.href = 'admin-student.html';
+        };
+
+        window.editStudent = (uid) => {
+            const s = allStudents.find(student => student.id === uid);
+            if (!s) return;
+
+            document.getElementById('modal-title').textContent = 'Edit Student Info';
+            document.getElementById('submit-btn').textContent = 'Update Student';
+            document.getElementById('stu-uid').value = s.id;
+            document.getElementById('stu-email').value = s.email;
+            document.getElementById('stu-email').disabled = true; // Email usually stays the same
+            document.getElementById('stu-fname').value = s.firstName;
+            document.getElementById('stu-lname').value = s.lastName;
+            document.getElementById('stu-id').value = s.studentId;
+            document.getElementById('stu-section').value = s.section;
+            document.getElementById('stu-company').value = s.company;
+            document.getElementById('stu-position').value = s.position;
+            document.getElementById('stu-ojt-start').value = s.ojtStart || '';
+            
+            // Set checkboxes
+            const schedule = s.workSchedule || [1,2,3,4,5];
+            const checkboxes = document.querySelectorAll('#stu-schedule input');
+            checkboxes.forEach(cb => {
+                cb.checked = schedule.includes(parseInt(cb.value));
+            });
+
+            modal.style.display = 'flex';
+        };
+
+        window.archiveStudent = async (uid) => {
+            const confirmed = await showConfirm('Archive Student', 'Are you sure you want to archive this student? They will be moved to the archives.', 'warning');
+            if (!confirmed) return;
+            try {
+                await updateUserStatus(uid, false);
+                showToast('Student archived successfully!', 'success');
+                loadStudents();
+            } catch (error) {
+                showToast('Error archiving student.', 'error');
+            }
+        };
+
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = allStudents.filter(s => 
+                `${s.firstName} ${s.lastName}`.toLowerCase().includes(term) ||
+                s.studentId.toLowerCase().includes(term) ||
+                s.section.toLowerCase().includes(term) ||
+                s.company.toLowerCase().includes(term)
+            );
+            renderStudents(filtered);
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submit-btn');
+            
+            // Final validation check to prevent functional submission if disabled
+            validateUniqueness();
+            if (submitBtn.disabled) {
+                showToast('Please resolve duplicate information first.', 'error');
+                return;
+            }
+            
+            const uid = document.getElementById('stu-uid').value;
+            const email = document.getElementById('stu-email').value;
+            const firstName = document.getElementById('stu-fname').value;
+            const lastName = document.getElementById('stu-lname').value;
+            const studentId = document.getElementById('stu-id').value;
+            const section = document.getElementById('stu-section').value;
+            const company = document.getElementById('stu-company').value;
+            const position = document.getElementById('stu-position').value;
+            const ojtStart = document.getElementById('stu-ojt-start').value;
+            const workSchedule = Array.from(document.querySelectorAll('#stu-schedule input:checked')).map(cb => parseInt(cb.value));
+
+            submitBtn.disabled = true;
+
+            try {
+                if (uid) {
+                    // EDIT MODE
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+                    await updateDoc(doc(db, "users", uid), {
+                        firstName, lastName, studentId, section, company, position, ojtStart, workSchedule
+                    });
+                    showToast('Student info updated successfully!', 'success');
+                } else {
+                    // ADD MODE
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating Account...';
+                    
+                    const tempPassword = "Pass" + studentId;
+                    const { initializeApp: initSecondary } = await import("https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js");
+                    const { getAuth: getAuthSecondary, createUserWithEmailAndPassword, signOut: signOutSecondary } = await import("https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js");
+
+                    const secondaryApp = initSecondary(firebaseConfig, "Secondary");
+                    const secondaryAuth = getAuthSecondary(secondaryApp);
+
+                    const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, tempPassword);
+                    const newUser = userCredential.user;
+                    const newUid = newUser.uid;
+
+                    const studentData = {
+                        firstName, lastName, email, studentId, section, company, position, ojtStart, workSchedule,
+                        role: 'student', isActive: true, createdAt: serverTimestamp()
+                    };
+
+                    await setDoc(doc(db, "users", newUid), studentData);
+                    await signOutSecondary(secondaryAuth);
+                    
+                    showToast('Student Account Created Successfully!', 'success');
+                    
+                    // Specific complex feedback for new account
+                    await showConfirm('Credentials Generated', 
+                        `Email: ${email}\nTemp Password: ${tempPassword}\n\nPlease copy these credentials for the student.`, 
+                        'info'
+                    );
+                }
+                
+                modal.style.display = 'none';
+                form.reset();
+                loadStudents();
+            } catch (error) {
+                console.error(error);
+                alert('Error: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Save Student';
+            }
+        });
+
+        loadStudents();
+    </script>
+</body>
+</html>

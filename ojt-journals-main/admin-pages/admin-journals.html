@@ -1,0 +1,197 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Journal Submissions | Admin</title>
+    <link rel="stylesheet" href="../system-script/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .filter-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        .journal-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .journal-table th {
+            text-align: left;
+            padding: 1rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+        }
+        .journal-table td {
+            padding: 1.25rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .journal-table tr:hover {
+            background: var(--background);
+        }
+        .status-pill {
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .pill-pending { background: #fef3c7; color: #92400e; }
+        .pill-reviewed { background: #d1fae5; color: #065f46; }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="../index.html" class="logo">
+            <img src="../assets/richwell-colleges-logo.webp" alt="Logo" style="height: 40px;">
+        </a>
+        <div class="nav-links">
+            <a href="admin-dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
+            <a href="admin-students.html" class="nav-link"><i class="fas fa-users"></i> Students</a>
+            <!-- Journals hidden as per request -->
+        </div>
+        <div>
+            <button id="logout-btn" class="btn btn-outline" style="padding: 0.5rem 1rem;">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container animate-fade">
+        <div class="page-header">
+            <div>
+                <h1>Journal Submissions</h1>
+                <p style="color: var(--text-muted);">Global history of all student journal entries.</p>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <div class="glass-card" style="padding: 0.5rem 1rem; flex: 1; display: flex; gap: 1rem; align-items: center;">
+                <i class="fas fa-filter" style="color: var(--text-muted);"></i>
+                <select id="status-filter" style="border: none; background: transparent; width: auto; font-weight: 600;">
+                    <option value="all">All Status</option>
+                    <option value="pending">Pending Review</option>
+                    <option value="reviewed">Reviewed</option>
+                </select>
+                <div style="width: 1px; height: 20px; background: var(--border);"></div>
+                <input type="text" id="name-search" placeholder="Search student name..." style="border: none; background: transparent; flex: 1;">
+            </div>
+        </div>
+
+        <div class="glass-card" style="padding: 0; overflow-x: auto;">
+            <table class="journal-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Student</th>
+                        <th>Week</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="journal-list-body">
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem;">Loading journals...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer class="minimal-footer">
+        <p>
+            <a href="../terms.html">Terms & Conditions</a>
+            <span>Developed by Jun Alvior</span>
+        </p>
+    </footer>
+
+    <script type="module">
+        import { logoutUser, guardPage } from '../system-script/auth.js';
+        import { getAllJournals, getAllStudents } from '../system-script/admin-utils.js';
+        import { showToast } from '../system-script/ui-utils.js';
+
+        guardPage('admin');
+        document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+        let journals = [];
+        let studentsMap = {};
+
+        async function init() {
+            try {
+                // Fetch students first to map names
+                const students = await getAllStudents();
+                students.forEach(s => studentsMap[s.id] = `${s.firstName} ${s.lastName}`);
+                
+                // Fetch journals
+                await loadJournals();
+            } catch (error) {
+                console.error(error);
+                showToast('Failed to load data.', 'error');
+            }
+        }
+
+        async function loadJournals() {
+            const status = document.getElementById('status-filter').value;
+            try {
+                document.getElementById('journal-list-body').innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem;">Fetching...</td></tr>';
+                journals = await getAllJournals(status);
+                renderJournals(journals);
+            } catch (error) {
+                showToast('Error fetching journals.', 'error');
+            }
+        }
+
+        function renderJournals(list) {
+            const body = document.getElementById('journal-list-body');
+            const searchTerm = document.getElementById('name-search').value.toLowerCase();
+            
+            const filtered = list.filter(j => {
+                const name = studentsMap[j.userId] || 'Unknown Student';
+                return name.toLowerCase().includes(searchTerm);
+            });
+
+            if (filtered.length === 0) {
+                body.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 3rem;">No journals found.</td></tr>';
+                return;
+            }
+
+            body.innerHTML = filtered.map(j => `
+                <tr>
+                    <td style="font-weight: 600;">${new Date(j.date).toLocaleDateString(undefined, { dateStyle: 'medium' })}</td>
+                    <td>
+                        <div style="font-weight: 500;">${studentsMap[j.userId] || 'Unknown Student'}</div>
+                    </td>
+                    <td>Week ${j.week}</td>
+                    <td>
+                        <span class="status-pill ${j.reviewed ? 'pill-reviewed' : 'pill-pending'}">
+                            ${j.reviewed ? 'Reviewed' : 'Pending'}
+                        </span>
+                    </td>
+                    <td>
+                        <button onclick="reviewJournal('${j.userId}', '${j.date}')" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">
+                            Review
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        window.reviewJournal = (uid, date) => {
+            sessionStorage.setItem('selectedStudentUid', uid);
+            window.location.href = `admin-student.html?date=${date}`;
+        };
+
+        document.getElementById('status-filter').addEventListener('change', loadJournals);
+        document.getElementById('name-search').addEventListener('input', () => renderJournals(journals));
+
+        init();
+    </script>
+</body>
+</html>

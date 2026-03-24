@@ -1,0 +1,152 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile | Student</title>
+    <link rel="stylesheet" href="../system-script/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .profile-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .profile-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .profile-pic {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        .info-value {
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="../index.html" class="logo">
+            <img src="../assets/richwell-colleges-logo.webp" alt="Logo" style="height: 40px;">
+        </a>
+        <button id="menu-toggle" class="menu-toggle"><i class="fas fa-bars"></i></button>
+        <div class="nav-links">
+            <a href="dashboard.html" class="nav-link"><i class="fas fa-home"></i> Home</a>
+            <a href="journals.html" class="nav-link"><i class="fas fa-book"></i> Journals</a>
+            <!-- Profile hidden as per request -->
+        </div>
+        <div>
+            <button id="logout-btn" class="btn btn-outline" style="padding: 0.5rem 1rem;">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container animate-fade">
+        <div class="profile-container">
+            <div class="profile-header">
+                <h1 id="full-name">Loading...</h1>
+                <p id="student-id" style="color: var(--text-muted);"></p>
+            </div>
+
+            <div class="glass-card">
+                <h3 style="margin-bottom: 1.5rem;"><i class="fas fa-id-card"></i> Student Information</h3>
+                
+                <div class="info-row">
+                    <span class="info-label">Section</span>
+                    <span id="section" class="info-value">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email</span>
+                    <span id="email" class="info-value">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Company</span>
+                    <span id="company" class="info-value">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Position</span>
+                    <span id="position" class="info-value">-</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Account Status</span>
+                    <span id="status" class="badge badge-success">Active</span>
+                </div>
+            </div>
+
+            <div style="margin-top: 2rem; text-align: center;">
+                <p style="font-size: 0.8rem; color: var(--text-muted);">
+                    If any information is incorrect, please contact your OJT Coordinator.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="minimal-footer">
+        <p>
+            <a href="../terms.html">Terms & Conditions</a>
+            <span>Developed by Jun Alvior</span>
+        </p>
+    </footer>
+
+    <script type="module">
+        /**
+         * Student Profile Module
+         * Displays the primary information of the authenticated student,
+         * including their OJT company, position, and account status.
+         */
+        import { auth, db } from '../system-script/firebase-core.js';
+        import { logoutUser, guardPage } from '../system-script/auth.js';
+        import { setupHamburgerMenu } from '../system-script/ui-utils.js';
+        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+        guardPage('student');
+        setupHamburgerMenu();
+        document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) return;
+
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+                const data = userDoc.data();
+                
+                document.getElementById('full-name').textContent = `${data.firstName} ${data.lastName}`;
+                document.getElementById('student-id').textContent = data.studentId;
+                document.getElementById('section').textContent = data.section;
+                document.getElementById('email').textContent = data.email;
+                document.getElementById('company').textContent = data.company;
+                document.getElementById('position').textContent = data.position;
+                
+                if (!data.isActive) {
+                    const statusBadge = document.getElementById('status');
+                    statusBadge.textContent = 'Inactive';
+                    statusBadge.className = 'badge badge-danger';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

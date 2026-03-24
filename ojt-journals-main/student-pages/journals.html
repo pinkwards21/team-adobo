@@ -1,0 +1,170 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Journals | Student</title>
+    <link rel="stylesheet" href="../system-script/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .journal-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .journal-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            transition: transform 0.2s;
+            animation: slideUp 0.4s ease-out forwards;
+        }
+        .journal-item:hover {
+            transform: scale(1.01);
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .skeleton-entry {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="../index.html" class="logo">
+            <img src="../assets/richwell-colleges-logo.webp" alt="Logo" style="height: 40px;">
+        </a>
+        <button id="menu-toggle" class="menu-toggle"><i class="fas fa-bars"></i></button>
+        <div class="nav-links">
+            <a href="dashboard.html" class="nav-link"><i class="fas fa-home"></i> Home</a>
+            <!-- Journals hidden as per request -->
+            <a href="profile.html" class="nav-link"><i class="fas fa-user-circle"></i> Profile</a>
+        </div>
+        <div>
+            <button id="logout-btn" class="btn btn-outline" style="padding: 0.5rem 1rem;">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+    </nav>
+
+    <div class="container animate-fade">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <div>
+                <h1>My Journals</h1>
+                <p style="color: var(--text-muted);">View all your submitted and missing journal entries.</p>
+            </div>
+            <a href="journal.html" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Entry
+            </a>
+        </div>
+
+        <div class="glass-card" style="padding: 0; background: transparent; border: none; box-shadow: none;">
+            <div id="journal-container" class="journal-list">
+                <div class="skeleton-entry" style="padding: 1rem 1.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+                    <div class="skeleton" style="height: 25px; width: 30%;"></div>
+                    <div class="skeleton" style="height: 25px; width: 15%;"></div>
+                </div>
+                <div class="skeleton-entry" style="padding: 1rem 1.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+                    <div class="skeleton" style="height: 25px; width: 40%;"></div>
+                    <div class="skeleton" style="height: 25px; width: 10%;"></div>
+                </div>
+                <div class="skeleton-entry" style="padding: 1rem 1.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+                    <div class="skeleton" style="height: 25px; width: 25%;"></div>
+                    <div class="skeleton" style="height: 25px; width: 20%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="minimal-footer">
+        <p>
+            <a href="../terms.html">Terms & Conditions</a>
+            <span>Developed by Jun Alvior</span>
+        </p>
+    </footer>
+
+    <script type="module">
+        /**
+         * Student Journals List Module
+         * Displays a chronological history of a student's journal submissions
+         * and clearly identifies dates where entries are still missing.
+         */
+        import { auth } from '../system-script/firebase-core.js';
+        import { logoutUser, guardPage } from '../system-script/auth.js';
+        import { getStudentProgress } from '../system-script/journal-utils.js';
+        import { setupHamburgerMenu } from '../system-script/ui-utils.js';
+
+        guardPage('student');
+        setupHamburgerMenu();
+        document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) return;
+
+            try {
+                const progress = await getStudentProgress(user.uid);
+                renderJournals(progress.journals, progress.missingDates);
+            } catch (error) {
+                console.error(error);
+                document.getElementById('journal-container').innerHTML = '<p style="color: var(--danger); text-align: center;">Failed to load journals.</p>';
+            }
+        });
+
+        function renderJournals(journals, missingDates) {
+            const container = document.getElementById('journal-container');
+            
+            const allEntries = [
+                ...journals.map(j => ({ ...j, type: 'entry' })),
+                ...missingDates.map(date => ({ date, type: 'missing' }))
+            ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (allEntries.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 3rem;">No journal entries yet.</p>';
+                return;
+            }
+
+            container.innerHTML = allEntries.map(item => {
+                if (item.type === 'missing') {
+                    return `
+                        <div class="journal-item glass-card" style="border: 1px dashed var(--danger);">
+                            <div>
+                                <div style="font-weight: 600; font-size: 1.1rem; color: var(--danger);">${new Date(item.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">Missing Submission</div>
+                            </div>
+                            <div style="display: flex; gap: 1rem; align-items: center;">
+                                <span class="badge badge-danger">Missing</span>
+                                <a href="journal.html?date=${item.date}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                                    Create Now
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div class="journal-item glass-card">
+                        <div>
+                            <div style="font-weight: 600; font-size: 1.1rem;">${new Date(item.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+                            <div style="font-size: 0.85rem; color: var(--text-muted);">Week ${item.week} ${!item.submitted ? '(Draft)' : ''}</div>
+                        </div>
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <span class="badge ${item.reviewed ? 'badge-success' : (item.submitted ? 'badge-warning' : 'badge-outline')}">
+                                ${item.reviewed ? 'Reviewed' : (item.submitted ? 'Submitted' : 'Draft')}
+                            </span>
+                            <a href="journal.html?date=${item.date}" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                                <i class="fas fa-edit"></i> View/Edit
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>

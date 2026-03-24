@@ -1,0 +1,159 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archived Students | Admin</title>
+    <link rel="stylesheet" href="../system-script/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .student-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .student-table th {
+            text-align: left;
+            padding: 1rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .student-table td {
+            padding: 1.25rem 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .student-table tr:hover {
+            background: var(--glass-bg);
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="../index.html" class="logo">
+            <img src="../assets/richwell-colleges-logo.webp" alt="Logo" style="height: 40px;">
+            <span style="font-size: 0.7rem; color: var(--secondary); margin-left: 0.5rem; background: rgba(236, 72, 153, 0.1); padding: 0.2rem 0.5rem; border-radius: 4px;">ADMIN</span>
+        </a>
+        <button id="menu-toggle" class="menu-toggle"><i class="fas fa-bars"></i></button>
+        <div class="nav-links">
+            <a href="admin-dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
+            <a href="admin-students.html" class="nav-link"><i class="fas fa-users"></i> Students</a>
+        </div>
+        <div>
+            <button id="logout-btn" class="btn btn-outline" style="padding: 0.5rem 1rem;">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container animate-fade">
+        <div class="page-header">
+            <div>
+                <h1>Archived Students</h1>
+                <p style="color: var(--text-muted);">View and restore previously archived students.</p>
+            </div>
+        </div>
+
+        <div class="glass-card" style="padding: 0; overflow-x: auto;">
+            <table class="student-table">
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Student ID</th>
+                        <th>Section</th>
+                        <th>Company</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="student-list-body">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">Loading archives...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer class="minimal-footer">
+        <p>
+            <a href="../terms.html">Terms & Conditions</a>
+            <span>Developed by Jun Alvior</span>
+        </p>
+    </footer>
+
+    <script type="module">
+        /**
+         * Admin Archives Module
+         * Manages historically inactive student accounts. Allows the retrieval
+         * and restoration of previously archived student records.
+         */
+        import { logoutUser, guardPage } from '../system-script/auth.js';
+        import { getAllStudents, updateUserStatus } from '../system-script/admin-utils.js';
+        import { showToast, showConfirm, setupHamburgerMenu } from '../system-script/ui-utils.js';
+
+        guardPage('admin');
+        setupHamburgerMenu();
+        document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+        let allStudents = [];
+
+        async function loadArchives() {
+            try {
+                allStudents = await getAllStudents(false); // Load inactive students
+                renderStudents(allStudents);
+            } catch (error) {
+                console.error(error);
+                document.getElementById('student-list-body').innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--danger);">Failed to load archives.</td></tr>';
+            }
+        }
+
+        function renderStudents(students) {
+            const body = document.getElementById('student-list-body');
+            if (students.length === 0) {
+                body.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 3rem;">No archived students found.</td></tr>';
+                return;
+            }
+
+            body.innerHTML = students.map(s => `
+                <tr>
+                    <td>
+                        <div style="font-weight: 600;">${s.firstName} ${s.lastName}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">${s.email}</div>
+                    </td>
+                    <td style="font-family: monospace;">${s.studentId}</td>
+                    <td>${s.section}</td>
+                    <td>${s.company}</td>
+                    <td>
+                        <span class="badge badge-danger">Archived</span>
+                    </td>
+                    <td>
+                        <button onclick="restoreStudent('${s.id}')" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">
+                            <i class="fas fa-undo"></i> Restore
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        window.restoreStudent = async (uid) => {
+            const confirmed = await showConfirm('Restore Student', 'Are you sure you want to restore this student to active status?', 'info');
+            if (!confirmed) return;
+            try {
+                await updateUserStatus(uid, true);
+                showToast('Student restored successfully.', 'success');
+                loadArchives();
+            } catch (error) {
+                showToast('Error restoring student.', 'error');
+            }
+        };
+
+        loadArchives();
+    </script>
+</body>
+</html>

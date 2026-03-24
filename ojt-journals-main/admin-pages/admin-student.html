@@ -1,0 +1,377 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Journals | Admin</title>
+    <link rel="stylesheet" href="../system-script/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .student-profile {
+            display: flex;
+            align-items: flex-start;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        .profile-info { flex: 1; }
+        .calendar-container {
+            margin-top: 1.5rem;
+            background: var(--glass-bg);
+            border-radius: 1rem;
+            border: 1px solid var(--glass-border);
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+            text-align: center;
+        }
+        .calendar-day-label {
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            padding-bottom: 1rem;
+        }
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.75rem;
+            font-size: 0.95rem;
+            cursor: default;
+            position: relative;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            min-height: 80px;
+        }
+        .calendar-day.has-journal {
+            cursor: pointer;
+            border-color: var(--glass-border);
+        }
+        .calendar-day.has-journal:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .calendar-day.reviewed {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        .calendar-day.pending {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+        .calendar-day.missing {
+            background: rgba(239, 68, 68, 0.05);
+            color: var(--danger);
+            border: 1px dashed rgba(239, 68, 68, 0.3);
+        }
+        .calendar-day.today {
+            font-weight: 800;
+            text-decoration: underline;
+        }
+        .calendar-day.other-month {
+            opacity: 0.3;
+        }
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            margin-top: 4px;
+        }
+        .dot-reviewed { background: var(--success); }
+        .dot-pending { background: var(--warning); }
+        .dot-missing { background: var(--danger); }
+
+        /* Responsive adjustments for 375px and below */
+        @media (max-width: 480px) {
+            .student-profile {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1.25rem;
+                align-items: center;
+                text-align: center;
+            }
+            .student-profile > div:last-child {
+                text-align: center !important;
+                width: 100%;
+                border-top: 1px solid var(--glass-border);
+                padding-top: 1rem;
+            }
+            .calendar-container {
+                padding: 1rem;
+            }
+            .calendar-grid {
+                gap: 0.25rem;
+            }
+            .calendar-day-label {
+                font-size: 0.65rem;
+            }
+            .calendar-day {
+                min-height: 50px;
+                font-size: 0.8rem;
+                border-radius: 0.4rem;
+            }
+            .calendar-header h2 {
+                font-size: 1.1rem;
+            }
+            .calendar-header .btn {
+                padding: 0.4rem 0.75rem !important;
+            }
+            .status-dot-legend {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 0.75rem !important;
+            }
+        }
+
+        /* Specific optimizations for 375px and below */
+        @media (max-width: 375px) {
+            .calendar-day {
+                min-height: 42px;
+                font-size: 0.7rem;
+                padding: 0.25rem;
+            }
+            .calendar-grid {
+                gap: 2px;
+            }
+            .calendar-day-label {
+                font-size: 0.6rem;
+            }
+            .student-profile {
+                padding: 1rem;
+            }
+            .calendar-header h2 {
+                font-size: 1rem;
+            }
+            .calendar-header .btn {
+                padding: 0.35rem 0.6rem !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav">
+        <a href="../index.html" class="logo">
+            <img src="../assets/richwell-colleges-logo.webp" alt="Logo" style="height: 40px;">
+            <span class="hide-mobile" style="font-size: 0.7rem; color: var(--secondary); margin-left: 0.5rem; background: rgba(236, 72, 153, 0.1); padding: 0.2rem 0.5rem; border-radius: 4px;">ADMIN</span>
+        </a>
+        <button id="menu-toggle" class="menu-toggle"><i class="fas fa-bars"></i></button>
+        <div class="nav-links">
+            <a href="admin-dashboard.html" class="nav-link"><i class="fas fa-chart-line"></i> Overview</a>
+            <a href="admin-students.html" class="nav-link"><i class="fas fa-users"></i> Students</a>
+        </div>
+        <div>
+            <button id="logout-btn" class="btn btn-outline" style="padding: 0.5rem 1rem;">
+                <i class="fas fa-sign-out-alt"></i> <span class="hide-mobile">Logout</span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="container animate-fade">
+        <div class="student-profile glass-card">
+            <div class="profile-info">
+                <h1 id="stu-name">Loading Student...</h1>
+                <p id="stu-detail" style="color: var(--text-muted);"></p>
+            </div>
+            <div style="text-align: right;">
+                <div id="stu-compliance" class="badge badge-warning">Loading Compliance...</div>
+                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Weekly Status</p>
+            </div>
+        </div>
+
+        <div class="calendar-container glass-card">
+            <div class="calendar-header">
+                <h2 id="calendar-month-year">Month Year</h2>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="prev-month" class="btn btn-outline" style="padding: 0.5rem 1rem;" aria-label="Previous Month"><i class="fas fa-chevron-left"></i></button>
+                    <button id="next-month" class="btn btn-outline" style="padding: 0.5rem 1rem;" aria-label="Next Month"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </div>
+            <div class="calendar-grid">
+                <div class="calendar-day-label">SUN</div>
+                <div class="calendar-day-label">MON</div>
+                <div class="calendar-day-label">TUE</div>
+                <div class="calendar-day-label">WED</div>
+                <div class="calendar-day-label">THU</div>
+                <div class="calendar-day-label">FRI</div>
+                <div class="calendar-day-label">SAT</div>
+            </div>
+            <div id="calendar-days" class="calendar-grid">
+                <!-- Days will be generated here -->
+            </div>
+            
+            <div class="status-dot-legend" style="margin-top: 2rem; display: flex; gap: 1.5rem; justify-content: center; font-size: 0.85rem; color: var(--text-muted);">
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                    <div class="status-dot dot-reviewed"></div> Reviewed
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                    <div class="status-dot dot-pending"></div> Pending
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                    <div class="status-dot dot-missing"></div> Missing
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="minimal-footer">
+        <p>
+            <a href="../terms.html">Terms & Conditions</a>
+            <span>Developed by Jun Alvior</span>
+        </p>
+    </footer>
+
+    <script type="module">
+        /**
+         * Admin Student Detail & History Module
+         * Provides an in-depth view of a specific student's OJT journey,
+         * listing all submitted journals and highlighting missing entries.
+         */
+        import { db } from '../system-script/firebase-core.js';
+        import { logoutUser, guardPage } from '../system-script/auth.js';
+        import { getStudentProgress } from '../system-script/journal-utils.js';
+        import { reviewJournal } from '../system-script/admin-utils.js';
+        import { showToast, escapeHTML, setupHamburgerMenu } from '../system-script/ui-utils.js';
+        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+        guardPage('admin');
+        setupHamburgerMenu();
+        document.getElementById('logout-btn').addEventListener('click', logoutUser);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        let studentUid = urlParams.get('uid') || sessionStorage.getItem('selectedStudentUid');
+        
+        let journals = [];
+        let missingDates = [];
+        let viewDate = new Date();
+
+        async function init() {
+            if (!studentUid) { window.location.href = 'admin-students.html'; return; }
+
+            try {
+                const progress = await getStudentProgress(studentUid);
+                const userData = progress.userData;
+                
+                document.getElementById('stu-name').textContent = `${escapeHTML(userData.firstName)} ${escapeHTML(userData.lastName)}`;
+                document.getElementById('stu-detail').textContent = `${escapeHTML(userData.studentId)} • ${escapeHTML(userData.section)} • ${escapeHTML(userData.company)}`;
+
+                journals = progress.journals;
+                missingDates = progress.missingDates;
+                
+                renderCalendar();
+                updateCompliance(progress);
+            } catch (error) {
+                console.error(error);
+                showToast('Failed to load student data.', 'error');
+            }
+        }
+
+        function renderCalendar() {
+            const daysContainer = document.getElementById('calendar-days');
+            const monthYearLabel = document.getElementById('calendar-month-year');
+            
+            const year = viewDate.getFullYear();
+            const month = viewDate.getMonth();
+            
+            monthYearLabel.textContent = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(viewDate);
+            
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const prevMonthDays = new Date(year, month, 0).getDate();
+
+            // Performance Fix: Create a map for O(1) lookups
+            const journalMap = new Map(journals.map(j => [j.date, j]));
+            const missingSet = new Set(missingDates);
+            
+            let html = '';
+            
+            // Previous month days
+            for (let i = firstDay - 1; i >= 0; i--) {
+                html += `<div class="calendar-day other-month">${prevMonthDays - i}</div>`;
+            }
+            
+            // Current month days
+            const today = new Date().toISOString().split('T')[0];
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const journal = journalMap.get(dateStr);
+                const isMissing = missingSet.has(dateStr);
+                
+                let classes = 'calendar-day';
+                if (dateStr === today) classes += ' today';
+                
+                let statusContent = '';
+                if (journal) {
+                    classes += journal.reviewed ? ' reviewed has-journal' : ' pending has-journal';
+                    statusContent = `<div class="status-dot ${journal.reviewed ? 'dot-reviewed' : 'dot-pending'}"></div>`;
+                } else if (isMissing) {
+                    classes += ' missing';
+                    statusContent = `<div class="status-dot dot-missing"></div>`;
+                }
+                
+                html += `
+                    <div class="${classes}" ${journal ? `onclick="window.selectJournal('${journal.id}', '${journal.date}')"` : ''}>
+                        ${day}
+                        ${statusContent}
+                    </div>
+                `;
+            }
+            
+            // Next month days
+            const totalCells = html.split('calendar-day').length - 1;
+            const remaining = 42 - totalCells;
+            for (let i = 1; i <= remaining; i++) {
+                html += `<div class="calendar-day other-month">${i}</div>`;
+            }
+            
+            daysContainer.innerHTML = html;
+        }
+
+        document.getElementById('prev-month').onclick = () => {
+            viewDate.setMonth(viewDate.getMonth() - 1);
+            renderCalendar();
+        };
+
+        document.getElementById('next-month').onclick = () => {
+            viewDate.setMonth(viewDate.getMonth() + 1);
+            renderCalendar();
+        };
+
+        window.selectJournal = (id, date) => {
+            window.location.href = `admin-journal-review.html?uid=${studentUid}&id=${id}&date=${date}`;
+        };
+
+        function updateCompliance(progress) {
+            const total = progress.totalSubmitted;
+            const missing = progress.totalMissing;
+            
+            const badge = document.getElementById('stu-compliance');
+            if (missing === 0 && total > 0) {
+                badge.textContent = 'On Track';
+                badge.className = 'badge badge-success';
+            } else if (missing > 0) {
+                badge.textContent = `${missing} Missing`;
+                badge.className = 'badge badge-danger';
+            } else {
+                badge.textContent = 'No Duty Yet';
+                badge.className = 'badge badge-outline';
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
